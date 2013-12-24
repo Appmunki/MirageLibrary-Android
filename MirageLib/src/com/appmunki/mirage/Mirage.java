@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URL;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
@@ -30,7 +29,7 @@ import android.util.Log;
 
 public class Mirage extends AsyncTask<Object, Object, Object> {
 
-	private static String URL = "http://192.168.0.13:3000/";
+	private static String URL = "http://192.168.0.22:3000/";
 
 	private String api_key = "";
 
@@ -91,7 +90,7 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 			case MATCH:
 				exist = checkFileExist(params[0] + "");
 				if (exist) {
-					response = executeMatch(params[0] + "", (UploadProgressListener) params[3]);
+					response = executeMatch(params[0] + "", (UploadProgressListener) params[1]);
 				}
 				break;
 			default:
@@ -118,7 +117,7 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 			bm.compress(CompressFormat.JPEG, 75, bos);
 			byte[] data = bos.toByteArray();
 			HttpClient httpClient = new DefaultHttpClient();
-			HttpPost postRequest = new HttpPost(URL + "patterns");
+			HttpPost postRequest = new HttpPost(URL + "patterns.json");
 
 			postRequest.addHeader("accept", "application/json");
 
@@ -166,7 +165,7 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 		bm.compress(CompressFormat.JPEG, 75, bos);
 		byte[] data = bos.toByteArray();
 		HttpClient httpClient = new DefaultHttpClient();
-		HttpPost postRequest = new HttpPost(URL + "uploads");
+		HttpPost postRequest = new HttpPost(URL + "uploads.json");
 
 		postRequest.addHeader("accept", "application/json");
 
@@ -181,6 +180,7 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 		});
 
 		multipartContent.addPart("upload", bab);
+		multipartContent.addPart("api_key", new StringBody(api_key));
 		totalSize = multipartContent.getContentLength();
 
 		postRequest.setEntity(multipartContent);
@@ -202,9 +202,15 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 		if (id != null) {
 
 			HttpClient httpClient = new DefaultHttpClient();
-			HttpDelete deleteRequest = new HttpDelete(URL + "patterns/" + id);
+			HttpDelete deleteRequest = new HttpDelete(URL + "patterns/" + id+".json");
 
-			deleteRequest.addHeader("content-type", "application/json");
+			
+			
+			
+			
+//			deleteRequest.addHeader("content-type", "application/json");
+			
+			
 
 			HttpResponse response = httpClient.execute(deleteRequest);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
@@ -226,10 +232,12 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 
 		if (id != null) {
 
-			URL url = new URL(URL + "patterns/" + id);
+			URL url = new URL(URL + "patterns/" + id+".json");
 
 			// --This code works for updating a record from the feed--
 			HttpPut httpPut = new HttpPut(url.toString());
+			
+			httpPut.addHeader("content-type", "application/json");
 
 			JSONObject json = new JSONObject();
 			if (name != null && !name.equals("")) {
@@ -239,6 +247,8 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 			if (description != null && !description.equals("")) {
 				json.put("_description", description);
 			}
+			
+			json.put("api_key", api_key);
 
 			StringEntity entity = new StringEntity(json.toString());
 			entity.setContentType("application/json;charset=UTF-8");// text/plain;charset=UTF-8
@@ -249,17 +259,21 @@ public class Mirage extends AsyncTask<Object, Object, Object> {
 			DefaultHttpClient httpClient = new DefaultHttpClient();
 
 			HttpResponse response = httpClient.execute(httpPut);
-			HttpEntity entity1 = response.getEntity();
+//			HttpEntity entity1 = response.getEntity();
 
-			if (entity1 != null && (response.getStatusLine().getStatusCode() == 201 || response.getStatusLine().getStatusCode() == 200)) {
-				String sl = response.getStatusLine().getReasonPhrase();
-				Log.v("MIRAGE", sl);
-				return sl;
-			} else {
-				String sl = response.getStatusLine().getReasonPhrase();
-				Log.v("MIRAGE", sl);
-				return sl;
+			BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
+			String sResponse;
+			StringBuilder s = new StringBuilder();
+
+			while ((sResponse = reader.readLine()) != null) {
+				s = s.append(sResponse);
 			}
+			Log.v("MIRAGE", "Response json: " + s);
+			return s.toString();
+			
+			
+			
+			
 		} else {
 			return null;
 		}
